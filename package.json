@@ -1,0 +1,19 @@
+{
+  "name": "mongodb-versionr",
+  "version": "0.1.0",
+  "description": "MongoDB Document Versioner",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "files": [
+    "/dist"
+  ],
+  "author": "Bouhraoua Kamel Eddine Adel (adelbouhraoua23@gmail.com)",
+  "license": "ISC",
+  "devDependencies": {
+    "mongodb": "^4.11.0"
+  }
+}
