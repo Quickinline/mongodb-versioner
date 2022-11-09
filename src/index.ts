@@ -1,1 +1,1 @@
-export { setContext as register } from './register'
+export { setContext } from './register'
