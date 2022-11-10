@@ -4,19 +4,22 @@ import { ModelInput } from "./types";
 
 export class VersionrModel {
 
-    collectionName: string;
-    databaseName: string;
-    versionControlCollectionName?: string
-    keys: Object | JSON;
+    public collectionName: string;
+    public databaseName: string;
+    public versionControlDatabaseName?: string
+    public versionControlCollectionName: string;
+    public keys?: Object | JSON;
 
     private streamObject: ChangeStream
     private connection: MongoClient
     private collection: Collection
+    private versioningCollection: Collection
 
-    constructor(connection: MongoClient, modelInput: ModelInput){
+    constructor(connection: MongoClient, modelInput: ModelInput) {
         // set the input variables 
         this.collectionName = modelInput.collection_name;
         this.databaseName = modelInput.database_name;
+        this.versionControlDatabaseName = modelInput.version_control_database_name ? modelInput.version_control_database_name : modelInput.database_name;
         this.versionControlCollectionName = modelInput.version_control_collection_name;
         this.keys = modelInput.keys;
 
@@ -24,21 +27,36 @@ export class VersionrModel {
         this.connection = connection;
         // instantiate
         this.collection = this.connection.db(this.databaseName).collection(this.collectionName)
+        this.versioningCollection = this.connection.db(this.versionControlDatabaseName).collection(this.versionControlCollectionName)
 
         this.startListener();
     }
 
     private startListener() {
+        this.streamObject = this.collection.watch();
 
-        this.streamObject =  this.collection.watch()
+        this.streamObject.on('change', (data) => {
+            console.log('Next ', data)
 
-        this.streamObject.on('change', (next) => {
-            console.log('Next ', next)
+            if(data.operationType === "insert"){
+                this.versioningCollection.insertOne({
+                    content: data.fullDocument
+                })
+            }else if(data.operationType === "update"){
+                this.versioningCollection.insertOne({
+                    content: data.fullDocument
+                })
+            }
+  
+        })
+
+        this.streamObject.on('error', (err) => {
+            console.log('Error ', err)
         })
 
     }
-    
-    public stopListener() {
 
+    public stopListener() {
+        if (!this.streamObject.closed) this.streamObject.close();
     }
 }
