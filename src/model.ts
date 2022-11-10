@@ -1,5 +1,6 @@
 import { Collection, MongoClient, ChangeStream } from "mongodb";
 import { ModelInput } from "./types";
+import { v4 as uuidv4 } from 'uuid'
 
 
 export class VersionrModel {
@@ -8,7 +9,7 @@ export class VersionrModel {
     public databaseName: string;
     public versionControlDatabaseName?: string
     public versionControlCollectionName: string;
-    public keys?: Object | JSON;
+    public keys: Object | JSON;
 
     private streamObject: ChangeStream
     private connection: MongoClient
@@ -32,22 +33,30 @@ export class VersionrModel {
         this.startListener();
     }
 
+    private push_model_version(newContent: any) {
+        // TODO check is there is a parent
+        let parent = null;
+
+        // Insert history
+        this.versioningCollection.insertOne({
+            model_history_id: uuidv4(),
+            content: newContent,
+            parent_model_history_id: parent, // previous model_history_id
+            keys: this.keys
+        })
+
+    }
+
     private startListener() {
         this.streamObject = this.collection.watch();
 
         this.streamObject.on('change', (data) => {
             console.log('Next ', data)
 
-            if(data.operationType === "insert"){
-                this.versioningCollection.insertOne({
-                    content: data.fullDocument
-                })
-            }else if(data.operationType === "update"){
-                this.versioningCollection.insertOne({
-                    content: data.fullDocument
-                })
+            if (data.operationType === "insert" || data.operationType === "update") {
+                this.push_model_version(data.fullDocument)
             }
-  
+
         })
 
         this.streamObject.on('error', (err) => {
